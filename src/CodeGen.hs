@@ -20,7 +20,7 @@ renderType TypeText          = "Text"
 renderType TypeBool          = "Bool"
 renderType TypeUnknown       = "Unknown"
 renderType (TypeArray tp)    = Text.concat ["[", renderType tp, "]"]
-renderType (TypeRecord name) = renderRecordName name
+renderType (TypeRecord name) = name
 
 unknown :: RecordField -> Bool
 unknown r = go $ r ^. type'
@@ -30,8 +30,7 @@ unknown r = go $ r ^. type'
     go _ = False
 
 printRecord :: Record -> Text
-printRecord r =
-  in Text.unlines $
+printRecord r = Text.unlines $
      [ Text.concat [ "data "
                    , r ^. name
                    , " = "
@@ -44,31 +43,35 @@ printRecord r =
         ]
 
 recordLines [] = ["  {"]
-recordLines (r:rs) | unknown r =
-  Text.concat ["  { -- ", printRecordField r ]
+recordLines rss@(r:rs) | unknown r =
+  Text.concat ["  { -- ", printAlign r ]
   : unknowns rs
                    | otherwise =
-  Text.concat ["  { ", printRecordField r ]
+  Text.concat ["  { ", printAlign r ]
   : knowns rs
   where
+    alignTo = maximum $ (Text.length . view name) <$> rss
+    printAlign r = printRecordField (alignTo - Text.length (r ^. name)) r
+
     unknowns [] = []
     unknowns (r:rs) | unknown r =
-      Text.concat ["--  , ", printRecordField r]
+      Text.concat ["--  , ", printAlign r]
         : unknowns rs
                     | otherwise =
-      Text.concat ["    ", printRecordField r]
+      Text.concat ["    ", printAlign r]
         : knowns rs
     knowns [] = []
     knowns (r:rs) | unknown r =
-      Text.concat ["--  , ", printRecordField r]
+      Text.concat ["--  , ", printAlign r]
       : knowns rs
                   | otherwise =
-      Text.concat ["  , ", printRecordField r]
+      Text.concat ["  , ", printAlign r]
       : knowns rs
 
-printRecordField :: RecordField -> Text
-printRecordField rf =
+printRecordField :: Int -> RecordField -> Text
+printRecordField align rf =
   Text.concat [ rf ^. name
+              , Text.replicate align " "
               , " :: "
               , renderType $ rf ^. type'
               ]

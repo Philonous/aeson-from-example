@@ -18,7 +18,10 @@ import           Util
 makeRecordName :: Text -> Text
 makeRecordName = upcase . toCamelCase
 
+makeFieldName :: Text -> Text -> Text
+makeFieldName prefix name = downcase prefix <> upcase (toCamelCase  name)
 
+toType :: MonadWriter [Record] m => Text -> Value -> m Type
 toType _ String{}       = return TypeText
 toType _ Bool{}         = return TypeBool
 toType _ Number{}       = return TypeNumber
@@ -29,21 +32,22 @@ toType name (Array arr) =
 toType _ Null           = return TypeUnknown
 toType name (Object o)  = handleObject name o
 
-toField :: MonadWriter [Record] m => (Text, Value) -> m RecordField
-toField (name, v) = do
+toField :: MonadWriter [Record] m => Text -> (Text, Value) -> m RecordField
+toField prefix (name, v) = do
   tp <- toType name v
-  return RecordField { recordFieldName = name
+  return RecordField { recordFieldName = makeFieldName prefix name
                      , recordFieldType' = tp
                      }
 
 handleObject :: MonadWriter [Record] m => Text -> Object -> m Type
 handleObject name o = do
-  fields <- forM (HMap.toList o) toField
-  let r = Record { recordName = toRecordTypeName name
+  let oName = makeRecordName name
+  fields <- forM (HMap.toList o) $ toField oName
+  let r = Record { recordName = toRecordTypeName oName
                  , recordFields = fields
                  }
   tell [r]
-  return . TypeRecord $ toRecordTypeName name
+  return . TypeRecord $ toRecordTypeName oName
 
 toRecordTypeName :: Text -> Text
 toRecordTypeName = upcase
