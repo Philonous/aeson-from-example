@@ -40,6 +40,10 @@ printRecord r = Text.unlines $
      ++ (recordLines $ r ^. fields)
      ++ [ "  }"
         , "  deriving (Show, Typeable, Data, Generic)"
+        , ""
+        , "deriveJSON (aesonOptions \"" <> downcase (r ^.name) <>"\") ''"
+          <> (r ^. name)
+        , "makeLensesWith camelCaseFields ''" <> r ^. name
         ]
 
 recordLines [] = ["  {"]

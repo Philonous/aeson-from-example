@@ -7,6 +7,7 @@ import           Data.Monoid
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import           Options.Applicative
 import           System.Exit
 import           System.IO
 
@@ -14,23 +15,44 @@ import           CodeGen
 import           Parse
 import           Types
 
-run :: BSL.ByteString -> IO [Record]
-run bsl = do
+parseRecords :: Text -> BSL.ByteString -> IO [Record]
+parseRecords name bsl = do
   case eitherDecode bsl of
     Left e -> do
       Text.hPutStr stderr "Error parsing JSON: "
       hPutStrLn stderr e
       exitFailure
     Right (o@Object{}) -> do
-      res <- parse "recordname" o
+      res <- parse name o
       case res of
         Left e -> do
           Text.hPutStrLn stderr $ "Error: " <> e
           exitFailure
         Right r -> return r
 
+data Options = Options { inFile :: Maybe String
+                       , outFile :: Maybe String
+                       , rootName :: String
+                       } deriving (Show)
 
-test = do
-  bsl <- BSL.readFile "test.json"
-  records <- run bsl
-  Text.putStrLn . Text.intercalate "\n\n" $ printRecord <$> records
+optionsParser :: Parser Options
+optionsParser =
+  Options <$> (optional $ strOption (short 'i'  <> help "input file"))
+          <*> (optional $ strOption (short 'o'  <> help "output file"))
+          <*> (strOption (short 'r' <> help "name of the base record"))
+
+getOptions :: IO Options
+getOptions = execParser (info optionsParser mempty)
+
+run :: IO ()
+run = do
+  opts <- getOptions
+  bsl <- case inFile opts of
+    Nothing -> BSL.hGetContents stdin
+    Just filename -> BSL.readFile filename
+  let name = Text.pack $ rootName opts
+  records <- parseRecords name bsl
+  let out = Text.intercalate "\n\n" $ printRecord <$> records
+  case outFile opts of
+    Nothing -> Text.hPutStrLn stdout out
+    Just outfile -> Text.writeFile outfile out
