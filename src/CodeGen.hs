@@ -131,7 +131,7 @@ printToJson record = Text.unlines . map Text.concat $
 -- FromJSON --------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-parseObjectBlock indent = indentedListBlock (indent-1)  printer "" ""
+parseObjectBlock indent = indentedListBlock (indent - 2)  printer " " " "
   where
     printer indent f =
       Text.concat [ (f ^. name)
