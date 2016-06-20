@@ -2,10 +2,14 @@
 
 ## Generate Haskell data type definitions based in json examples.
 
-Writing haskell types based on API definitions is tedious. This program takes a
-JSON example and generates data types based on it for you.  It is pretty simple
-and won't handle many edgecases, but it is good enough as a starting point in
-many situations.
+Writing Haskell types based on API definitions is tedious boilerplate. This
+program takes a JSON example and generates data types based on it for you.  It
+is pretty simple and won't handle many edgecases, but it is good enough as a
+starting point in many situations. It will also automatically create the
+{To|From}JSON instances.
+
+The output is meant to be used as a starting point for editing.
+
 
 ## Example usage
 
@@ -39,6 +43,35 @@ output
 
 
 ```haskell
+data GraphDriver = GraphDriver
+  { -- graphDriverData :: Unknown
+    graphDriverName :: Text
+  }
+  deriving (Show, Typeable, Data, Generic)
+
+instance ToJSON GraphDriver where
+  toJSON GraphDriver
+    { -- graphDriverData = graphDriverData
+      graphDriverName = graphDriverName
+    } =
+    object
+    [ -- "Data" .= graphDriverData
+      "Name" .= graphDriverName
+    ]
+
+
+instance FromJSON GraphDriver where
+  parseJSON = withObject "GraphDriver" $ \o -> do
+    -- graphDriverData <- o .: "Data"
+     graphDriverName <- o .: "Name"
+    return GraphDriver
+      { -- graphDriverData = graphDriverData
+        graphDriverName = graphDriverName
+      }
+
+makeLensesWith camelCaseFields ''GraphDriver
+
+
 data MyType = MyType
   { myTypeStatus      :: Text
   , myTypeDead        :: [Bool]
@@ -54,22 +87,68 @@ data MyType = MyType
   }
   deriving (Show, Typeable, Data, Generic)
 
-deriveJSON (aesonOptions "myType") ''MyType
+instance ToJSON MyType where
+  toJSON MyType
+    { myTypeStatus      = myTypeStatus
+    , myTypeDead        = myTypeDead
+    , myTypeRestarting  = myTypeRestarting
+--    , myTypeError       = myTypeError
+--    , myTypePids        = myTypePids
+    , myTypeStartedAt   = myTypeStartedAt
+    , myTypeFinishedAt  = myTypeFinishedAt
+    , myTypeRunning     = myTypeRunning
+    , myTypeGraphDriver = myTypeGraphDriver
+    , myTypeExitCode    = myTypeExitCode
+    , myTypeOOMKilled   = myTypeOOMKilled
+    } =
+    object
+    [ "Status"      .= myTypeStatus
+    , "Dead"        .= myTypeDead
+    , "Restarting"  .= myTypeRestarting
+--    , "Error"       .= myTypeError
+--    , "Pids"        .= myTypePids
+    , "StartedAt"   .= myTypeStartedAt
+    , "FinishedAt"  .= myTypeFinishedAt
+    , "Running"     .= myTypeRunning
+    , "GraphDriver" .= myTypeGraphDriver
+    , "ExitCode"    .= myTypeExitCode
+    , "OOMKilled"   .= myTypeOOMKilled
+    ]
+
+
+instance FromJSON MyType where
+  parseJSON = withObject "MyType" $ \o -> do
+    myTypeStatus      <- o .: "Status"
+    myTypeDead        <- o .: "Dead"
+    myTypeRestarting  <- o .: "Restarting"
+--    myTypeError       <- o .: "Error"
+--    myTypePids        <- o .: "Pids"
+    myTypeStartedAt   <- o .: "StartedAt"
+    myTypeFinishedAt  <- o .: "FinishedAt"
+    myTypeRunning     <- o .: "Running"
+    myTypeGraphDriver <- o .: "GraphDriver"
+    myTypeExitCode    <- o .: "ExitCode"
+    myTypeOOMKilled   <- o .: "OOMKilled"
+    return MyType
+      { myTypeStatus      = myTypeStatus
+      , myTypeDead        = myTypeDead
+      , myTypeRestarting  = myTypeRestarting
+--      , myTypeError       = myTypeError
+--      , myTypePids        = myTypePids
+      , myTypeStartedAt   = myTypeStartedAt
+      , myTypeFinishedAt  = myTypeFinishedAt
+      , myTypeRunning     = myTypeRunning
+      , myTypeGraphDriver = myTypeGraphDriver
+      , myTypeExitCode    = myTypeExitCode
+      , myTypeOOMKilled   = myTypeOOMKilled
+      }
+
 makeLensesWith camelCaseFields ''MyType
 
-
-data GraphDriver = GraphDriver
-  { -- graphDriverData :: Unknown
-    graphDriverName :: Text
-  }
-  deriving (Show, Typeable, Data, Generic)
-
-deriveJSON (aesonOptions "graphDriver") ''GraphDriver
-makeLensesWith camelCaseFields ''GraphDriver
 ```
 
 Note how it created an addition record type for the nested object. The name of
-that type is based on the field name where the nested object appeared
+that type is based on the field name where the nested object appeared.
 
 ## Limitations
 

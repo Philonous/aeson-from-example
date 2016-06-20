@@ -32,6 +32,7 @@ parseRecords name bsl = do
 
 data Options = Options { inFile :: Maybe String
                        , outFile :: Maybe String
+                       , revertObjects :: Bool
                        , rootName :: String
                        } deriving (Show)
 
@@ -39,6 +40,7 @@ optionsParser :: Parser Options
 optionsParser =
   Options <$> (optional $ strOption (short 'i'  <> help "input file"))
           <*> (optional $ strOption (short 'o'  <> help "output file"))
+          <*> (flag False True (long "reverse" <> help "revert order of type definitions") )
           <*> (strOption (short 'r' <> help "name of the base record"))
 
 getOptions :: IO Options
@@ -51,7 +53,10 @@ run = do
     Nothing -> BSL.hGetContents stdin
     Just filename -> BSL.readFile filename
   let name = Text.pack $ rootName opts
-  records <- parseRecords name bsl
+  records <- (if (revertObjects opts)
+              then reverse
+              else id)
+    <$> parseRecords name bsl
   let out = Text.intercalate "\n\n" $ printRecord <$> records
   case outFile opts of
     Nothing -> Text.hPutStrLn stdout out

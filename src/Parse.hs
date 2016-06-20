@@ -36,6 +36,7 @@ toField :: MonadWriter [Record] m => Text -> (Text, Value) -> m RecordField
 toField prefix (name, v) = do
   tp <- toType name v
   return RecordField { recordFieldName = makeFieldName prefix name
+                     , recordFieldJsonName = name
                      , recordFieldType' = tp
                      }
 
@@ -58,5 +59,5 @@ parse :: (Monad m) =>
       -> m (Either Text [Record])
 parse name (Object o) = do
   (_, records) <- runWriterT (handleObject name o)
-  return . Right $ reverse records
+  return $ Right records
 parse _ _ = return $ Left "Expected a top level object"

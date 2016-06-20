@@ -20,6 +20,7 @@ data Type = TypeNumber
 
 data RecordField =
   RecordField { recordFieldName :: !Text
+              , recordFieldJsonName :: !Text
               , recordFieldType' :: !Type
               } deriving (Show)
 
@@ -30,3 +31,11 @@ data Record = Record { recordName :: !Text
                      } deriving (Show)
 
 makeLensesWith camelCaseFields ''Record
+
+data Block = Block { blockStart, blockStartCommented
+                   , blockLineStart, blockLineStartCommmented
+                   , blockLineStartTrue :: !Text
+                   , blockFromLine :: Int -> RecordField -> Text
+                   }
+
+makeLensesWith camelCaseFields ''Block
